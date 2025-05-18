@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Study Notes</title>
+  <link rel="stylesheet" href="style.css"/>
+  <style>
+    /* Your original styling copied here inside style tag */
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', sans-serif;
+      background-color: white;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
+
+    header#topbar {
+      background-color: white;
+      padding: 10px;
+      border-bottom: 1px solid #ccc;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      position: sticky;
+      top: 0;
+      z-index: 2;
+    }
+
+    #subject-title {
+      font-weight: 300;
+      font-size: 18px;
+      color: #333;
+      margin: auto;
+    }
+
+    #back-button {
+      font-size: 25px;
+      cursor: pointer;
+      color: #333;
+    }
+
+    main {
+      flex: 1;
+      padding: 12px 16px 80px;
+      overflow-y: auto;
+    }
+
+    #search-box {
+      margin-bottom: 12px;
+    }
+
+    #search-input {
+      width: 100%;
+      padding: 10px;
+      font-size: 16px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+    }
+
+    #topic-container {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .topic-item {
+      padding: 13px 0;
+      border-bottom: 1px solid #ddd;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .topic-item:hover {
+      background-color: #f0f0f0;
+    }
+
+    #note-content {
+      padding: 16px;
+      border-top: 1px solid #ccc;
+      border-bottom: 1px solid #ccc;
+      margin-top: 20px;
+      white-space: pre-wrap;
+      color: #333;
+    }
+
+    #markdown-content {
+      padding: 16px;
+      border-top: 1px solid #ccc;
+      border-bottom: 1px solid #ccc;
+      margin-top: 20px;
+      color: #333;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      line-height: 1.5;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    #bottom-nav {
+      display: flex;
+      overflow-x: auto;
+      white-space: nowrap;
+      padding: 0.75rem 1rem;
+      background-color: white;
+      position: fixed;
+      bottom: 0;
+      width: 100%;
+      box-shadow: 0 -1px 2px rgba(0,0,0,0.1);
+      z-index: 20;
+      border-top: 1px solid #ccc;
+      scroll-snap-type: x mandatory;
+    }
+
+    #bottom-nav button {
+      flex: 0 0 auto;
+      scroll-snap-align: start;
+      margin: 0 6px;
+      padding: 0.5rem 1rem;
+      white-space: nowrap;
+      background-color: #f0f0f0;
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      font-weight: 500;
+      transition: background-color 0.2s ease, color 0.15s ease;
+    }
+
+    #bottom-nav button.active {
+      background-color: #000;
+      color: #fff;
+      pointer-events: none;
+    }
+
+    /* Markdown content styles (headings, links, lists, code) */
+    #markdown-content h1,
+    #markdown-content h2,
+    #markdown-content h3 {
+      color: #000;
+    }
+
+    #markdown-content a {
+      color: #007bff;
+      text-decoration: none;
+    }
+    #markdown-content a:hover {
+      text-decoration: underline;
+    }
+
+    #markdown-content pre {
+      background: #f8f9fa;
+      padding: 12px;
+      border-radius: 6px;
+      overflow-x: auto;
+      font-family: Consolas, monospace;
+    }
+  </style>
+
+  <!-- marked.js CDN for markdown parsing -->
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+</head>
+<body>
+  <header id="topbar">
+    <span id="back-button" onclick="goBack()" class="hidden">&#8592;</span>
+    <h1 id="subject-title">Study Notes</h1>
+  </header>
+
+  <main>
+    <div id="search-box">
+      <input type="text" id="search-input" placeholder="Search topics..." oninput="filterTopics()">
+    </div>
+    <div id="topic-container"></div>
+    <div id="note-content" class="hidden"></div>
+    <div id="markdown-content" class="hidden"></div>
+  </main>
+
+  <nav id="bottom-nav">
+    <button onclick="loadSubject('maths')" id="btn-maths">Maths</button>
+    <button onclick="loadSubject('ai_features')" id="btn-ai_features">AI Features</button>
+    <button onclick="loadSubject('english')" id="btn-english">English</button>
+    <button onclick="loadSubject('computer')" id="btn-computer">Computer</button>
+    <button onclick="loadSubject('tips_and_tricks')" id="btn-tips_and_tricks">Tips & Tricks</button>
+    <button onclick="loadSubject('current_affairs')" id="btn-current_affairs">Current Affairs</button>
+    <button onclick="window.location.href='https://imrutunjaya.github.io/Prototype3/'">Advanced Learner's</button>
+    <button onclick="window.location.href='https://imrutunjaya.github.io/notes/'">Annotation</button>
+  </nav>
+
+  <script>
+    const topicsFolder = 'topics/';
+    const subjects = {
+      maths: 'Maths',
+      ai_features: 'AI Features',
+      english: 'English',
+      computer: 'Computer',
+      tips_and_tricks: 'Tips & Tricks',
+      current_affairs: 'Current Affairs'
+    };
+
+    let currentSubjectKey = '';
+    let topicsList = [];  // list of {title, content} from markdown headings and paragraphs
+
+    const topicContainer = document.getElementById('topic-container');
+    const noteContent = document.getElementById('note-content');
+    const markdownContent = document.getElementById('markdown-content');
+    const subjectTitle = document.getElementById('subject-title');
+    const backButton = document.getElementById('back-button');
+    const searchInput = document.getElementById('search-input');
+
+    backButton.addEventListener('click', () => {
+      showTopicList(currentSubjectKey);
+    });
+
+    searchInput.addEventListener('input', () => {
+      filterTopics();
+    });
+
+    function loadSubject(subjectKey) {
+      currentSubjectKey = subjectKey;
+      subjectTitle.textContent = subjects[subjectKey] || 'Study Notes';
+      backButton.classList.add('hidden');
+      searchInput.value = '';
+      searchInput.disabled = false;
+
+      markdownContent.classList.add('hidden');
+      noteContent.classList.add('hidden');
+      topicContainer.classList.remove('hidden');
+
+      loadMarkdownTopics(subjectKey);
+    }
+
+    async function loadMarkdownTopics(subjectKey) {
+      try {
+        const mdFile = `${topicsFolder}${subjectKey}.md`;
+        const res = await fetch(mdFile);
+        if (!res.ok) throw new Error('Failed to load markdown file.');
+        const mdText = await res.text();
+
+        // Split the markdown into topics by top-level headings (## or #)
+        // We will treat each `##` or `#` heading as a topic title, text below it as content.
+        // Simpler approach: Split by '## ' headings, treat first as first topic or intro.
+
+        // Parse topics using regex split
+        // We'll split by /^## (.*)$/m
+        const regex = /^## (.*)$/gm;
+        let parts = [];
+        let match, lastIndex = 0;
+
+        while ((match = regex.exec(mdText)) !== null) {
+          if (match.index > lastIndex) {
+            parts.push(mdText.slice(lastIndex, match.index));
+          }
+          parts.push(match[0]);
+          lastIndex = regex.lastIndex;
+        }
+        parts.push(mdText.slice(lastIndex));
+
+        // Now group title and content pairs
+        let topics = [];
+        for (let i = 0; i < parts.length; i++) {
+          if (parts[i].startsWith('## ')) {
+            let title = parts[i].replace('## ', '').trim();
+            let content = (i + 1 < parts.length) ? parts[i+1].trim() : '';
+            topics.push({ title, content });
+            i++;
+          } else if (topics.length === 0) {
+            // Text before first ## heading treated as an intro topic or ignored
+          }
+        }
+
+        if (topics.length === 0) {
+          // No ## headings found, treat whole markdown as single topic
+          topics.push({ title: subjects[subjectKey], content: mdText });
+        }
+
+        topicsList = topics;
+        renderTopicList();
+
+      } catch (err) {
+        topicContainer.innerHTML = '<p style="color:red;">Failed to load notes.</p>';
+        console.error(err);
+      }
+    }
+
+    function renderTopicList() {
+      searchInput.disabled = false;
+      searchInput.value = '';
+      backButton.classList.add('hidden');
+      noteContent.classList.add('hidden');
+      markdownContent.classList.add('hidden');
+      topicContainer.classList.remove('hidden');
+      topicContainer.innerHTML = '';
+
+      if (topicsList.length === 0) {
+        topicContainer.innerHTML = '<p>No topics available.</p>';
+        return;
+      }
+
+      topicsList.forEach((topic, index) => {
+        const div = document.createElement('div');
+        div.className = 'topic-item';
+        div.textContent = topic.title;
+        div.style.cursor = 'pointer';
+        div.onclick = () => showTopicContent(index);
+        topicContainer.appendChild(div);
+      });
+    }
+
+    function filterTopics() {
+      const searchStr = searchInput.value.trim().toLowerCase();
+      const filtered = topicsList.filter(t =>
+        t.title.toLowerCase().includes(searchStr)
+      );
+
+      topicContainer.innerHTML = '';
+      if (filtered.length === 0) {
+        topicContainer.innerHTML = '<p>No topics found.</p>';
+        return;
+      }
+      filtered.forEach((topic, idx) => {
+        const div = document.createElement('div');
+        div.className = 'topic-item';
+        div.textContent = topic.title;
+        div.style.cursor = 'pointer';
+        // We find index in original topicsList corresponding to filtered index
+        // To keep things simple, get the index from topicsList
+        const originalIndex = topicsList.indexOf(topic);
+        div.onclick = () => showTopicContent(originalIndex);
+        topicContainer.appendChild(div);
+      });
+    }
+
+    function showTopicContent(topicIndex) {
+      searchInput.disabled = true;
+      backButton.classList.remove('hidden');
+      topicContainer.classList.add('hidden');
+      markdownContent.classList.remove('hidden');
+      noteContent.classList.add('hidden');
+
+      const topic = topicsList[topicIndex];
+      subjectTitle.textContent = `${subjects[currentSubjectKey]} > ${topic.title}`;
+
+      // Render markdown content from title + content (they may contain markdown)
+      markdownContent.innerHTML = marked.parse(`# ${topic.title}\n\n${topic.content}`);
+    }
+
+    // Initial load default
+    loadSubject('maths');
+  </script>
+</body>
+</html>
