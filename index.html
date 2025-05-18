@@ -262,6 +262,7 @@
     markdownContent.style.display = 'none';
     topicContainer.style.display = 'flex';
     bottomNav.style.display = 'flex';
+    searchInput.parentElement.style.display = 'block'; // Show search box
 
     try {
       const res = await fetch(topicsFolder + mdFile);
@@ -279,7 +280,6 @@
 
   // Parse markdown string to topic array by splitting on "## " headings
   function parseMarkdownTopics(mdText) {
-    // We'll treat lines starting with "## " as topic titles, collect following content until next "## "
     const lines = mdText.split(/\r?\n/);
     let topics = [];
     let currentTitle = null;
@@ -300,13 +300,11 @@
       }
     });
 
-    // Push last topic if exist
     if (currentTitle !== null) {
       topics.push({ title: currentTitle, content: currentContentLines.join('\n').trim() });
     }
 
     if (topics.length === 0) {
-      // No "## " headings found, entire mdText is one topic
       return [{ title: subjectTitle.textContent, content: mdText }];
     }
 
@@ -352,6 +350,7 @@
     backButton.style.display = 'inline';
     subjectTitle.textContent = `${currentSubjectKey.replace(/([A-Z])/g, ' $1').trim()} > ${filteredTopics[topicIndex].title}`;
     topicContainer.style.display = 'none';
+    searchInput.parentElement.style.display = 'none'; // Hide search box when showing content
     searchInput.disabled = true;
     markdownContent.style.display = 'block';
     bottomNav.style.display = 'none';
@@ -370,6 +369,7 @@
     searchInput.disabled = false;
     bottomNav.style.display = 'flex';
     searchInput.value = '';
+    searchInput.parentElement.style.display = 'block'; // Show search box on topic list
     filteredTopics = [...topicsList];
     renderTopicList();
   });
